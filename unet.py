@@ -4,6 +4,7 @@ import torch as th
 import torch.nn as nn
 import torchvision.transforms
 from PIL import Image
+from matplotlib import pyplot as plt
 
 
 class DoubleConv(nn.Module):
@@ -12,9 +13,9 @@ class DoubleConv(nn.Module):
 
         self.convs = nn.Sequential(
             # use padding same to avoid later cropping and better embedding
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=0),
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding='same'),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=0),
+            nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=3, stride=1, padding='same'),
             nn.ReLU(inplace=True),
         )
 
@@ -51,7 +52,7 @@ class Up(nn.Module):
             # not sure if align_corners is relevant, but probably better
             # TODO: read up on this
             nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=1, padding='same'),
         )
 
         self.reducefeatures = nn.Sequential(
@@ -115,7 +116,9 @@ class UNET(nn.Module):
 
 
 if __name__ == '__main__':
-    model = UNET(in_channels=1)
+    print("Building net...  ", end="", flush=True)
+    model = UNET(in_channels=3)
+    print("Done.\nLoading images...  ", end="", flush=True)
 
     im = imageio.imread("camera.png")
 
@@ -123,7 +126,25 @@ if __name__ == '__main__':
     im = im.resize(size=(572, 572), resample=Image.LANCZOS)
     im = np.asarray(im)
 
+    im_list = [
+        np.asarray(Image.fromarray(imageio.imread("./Kvasir-SEG/images/cju0qkwl35piu0993l0dewei2.jpg")).resize(size=(500, 500), resample=Image.LANCZOS)),
+        np.asarray(Image.fromarray(imageio.imread("./Kvasir-SEG/images/cju0qoxqj9q6s0835b43399p4.jpg")).resize(size=(500, 500), resample=Image.LANCZOS)),
+        np.asarray(Image.fromarray(imageio.imread("./Kvasir-SEG/images/cju0qx73cjw570799j4n5cjze.jpg")).resize(size=(500, 500), resample=Image.LANCZOS)),
+        np.asarray(Image.fromarray(imageio.imread("./Kvasir-SEG/images/cju0roawvklrq0799vmjorwfv.jpg")).resize(size=(500, 500), resample=Image.LANCZOS)),
+        ]
+    ims = np.array(im_list)
+    ims = np.transpose(ims, (0, 3, 1, 2))
+    ims = ims.astype(np.float32) / 255.0
+
+
     im = im[np.newaxis, np.newaxis, :, :]
     im_tensor = th.Tensor(im)
+    im_tensor = th.Tensor(ims)
+    print("Done.\nDoing Forward pass... ", end="", flush=True)
 
-    model(im_tensor)
+    pred = model(im_tensor)
+
+    print("Done.")
+    im_pred = pred.detach().numpy().squeeze()
+    plt.imshow(im_pred[0])
+    plt.show()
