@@ -1,7 +1,7 @@
 import logging
 import math
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, List
 
 import imageio
 import numpy as np
